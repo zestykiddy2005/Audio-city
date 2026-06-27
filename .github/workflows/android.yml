@@ -33,12 +33,14 @@ jobs:
     - name: Ensure Gradle Wrapper is Present
       run: |
         if [ -f gradlew ]; then
+          sed -i 's/\r$//' gradlew
           chmod +x gradlew
-          echo "Gradle wrapper exists and execute permissions granted."
+          echo "Gradle wrapper exists, formatted line endings to LF, and execution permissions granted."
         else
           echo "Gradle wrapper (gradlew) is missing from the repository."
           echo "Generating a new Gradle wrapper using pre-installed Gradle..."
-          gradle wrapper --gradle-version 8.2
+          gradle wrapper --gradle-version 9.3.1
+          sed -i 's/\r$//' gradlew
           chmod +x gradlew
           echo "Gradle wrapper generated successfully."
         fi
