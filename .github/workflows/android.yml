@@ -30,19 +30,33 @@ jobs:
           echo "GOOGLE_API_KEY=" > .env
         fi
 
-    - name: Ensure Gradle Wrapper is Present
+    - name: Ensure Gradle Wrapper is Present and Valid
       run: |
+        echo "Validating and restoring Gradle Wrapper..."
+        mkdir -p gradle/wrapper
+        
+        # Always download a fresh, official gradle-wrapper.jar to avoid any corruption from git/sync transfer
+        echo "Downloading official gradle-wrapper.jar for Gradle 8.11.1..."
+        curl -sSLo gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/v8.11.1/gradle/wrapper/gradle-wrapper.jar
+        
+        # Verify the jar is a valid zip/jar file
+        if unzip -t gradle/wrapper/gradle-wrapper.jar >/dev/null 2>&1; then
+          echo "Success: gradle-wrapper.jar is a valid ZIP/JAR file."
+        else
+          echo "Warning: Download failed or jar is invalid. Regenerating wrapper using local gradle..."
+          rm -f gradle/wrapper/gradle-wrapper.jar
+          gradle wrapper --gradle-version 8.11.1
+        fi
+        
         if [ -f gradlew ]; then
           sed -i 's/\r$//' gradlew
           chmod +x gradlew
-          echo "Gradle wrapper exists, formatted line endings to LF, and execution permissions granted."
+          echo "Gradle wrapper script (gradlew) formatted and execution permissions granted."
         else
-          echo "Gradle wrapper (gradlew) is missing from the repository."
-          echo "Generating a new Gradle wrapper using pre-installed Gradle..."
+          echo "Generating gradlew script..."
           gradle wrapper --gradle-version 8.11.1
           sed -i 's/\r$//' gradlew
           chmod +x gradlew
-          echo "Gradle wrapper generated successfully."
         fi
 
     - name: Restore or Generate Debug Keystore
