@@ -1,0 +1,21 @@
+# Treat jar files as binary to prevent Git from modifying their line endings during check-in/check-out
+*.jar binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.keystore binary
+*.jks binary
+
+# Set default behavior to automatically normalize line endings for text files
+* text=auto
+
+# Ensure bash scripts have LF line endings
+gradlew text eol=lf
+*.sh text eol=lf
+
+# Ensure bat files have CRLF line endings
+*.bat text eol=crlf
+*.cmd text eol=crlf
