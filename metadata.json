@@ -1,0 +1,6 @@
+{
+  "name": "Audio City",
+  "description": "Complete premium music streaming and AI voice-interactive companion platform",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
