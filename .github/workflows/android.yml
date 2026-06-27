@@ -30,34 +30,22 @@ jobs:
           echo "GOOGLE_API_KEY=" > .env
         fi
 
-    - name: Ensure Gradle Wrapper is Present and Valid
+    - name: Generate Fresh Gradle Wrapper
       run: |
-        echo "Validating and restoring Gradle Wrapper..."
-        mkdir -p gradle/wrapper
+        echo "Deleting old wrapper..."
+        rm -f gradlew gradlew.bat gradle/wrapper/gradle-wrapper.jar gradle/wrapper/gradle-wrapper.properties
         
-        # Always download a fresh, official gradle-wrapper.jar to avoid any corruption from git/sync transfer
-        echo "Downloading official gradle-wrapper.jar for Gradle 8.11.1..."
-        curl -sSLo gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/v8.11.1/gradle/wrapper/gradle-wrapper.jar
+        echo "Generating a fresh, 100% valid Gradle 8.11.1 wrapper..."
+        gradle wrapper --gradle-version 8.11.1
         
-        # Verify the jar is a valid zip/jar file
-        if unzip -t gradle/wrapper/gradle-wrapper.jar >/dev/null 2>&1; then
-          echo "Success: gradle-wrapper.jar is a valid ZIP/JAR file."
-        else
-          echo "Warning: Download failed or jar is invalid. Regenerating wrapper using local gradle..."
-          rm -f gradle/wrapper/gradle-wrapper.jar
-          gradle wrapper --gradle-version 8.11.1
-        fi
+        echo "Ensuring execution permissions and LF line endings..."
+        sed -i 's/\r$//' gradlew
+        chmod +x gradlew
         
-        if [ -f gradlew ]; then
-          sed -i 's/\r$//' gradlew
-          chmod +x gradlew
-          echo "Gradle wrapper script (gradlew) formatted and execution permissions granted."
-        else
-          echo "Generating gradlew script..."
-          gradle wrapper --gradle-version 8.11.1
-          sed -i 's/\r$//' gradlew
-          chmod +x gradlew
-        fi
+        echo "Checking if gradle-wrapper.jar is a valid ZIP/JAR..."
+        unzip -t gradle/wrapper/gradle-wrapper.jar
+        
+        echo "Successfully generated uncorrupted Gradle Wrapper."
 
     - name: Restore or Generate Debug Keystore
       run: |
