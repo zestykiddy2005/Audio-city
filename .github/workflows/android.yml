@@ -1,0 +1,97 @@
+name: Android Build & APK Generator
+
+on:
+  push:
+    branches: [ "main", "master", "dev", "develop" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch: # Allows manual trigger from the Actions tab
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Set up Environment Secrets
+      run: |
+        if [ -f .env.example ]; then
+          cp .env.example .env
+        else
+          echo "GOOGLE_API_KEY=" > .env
+        fi
+
+    - name: Ensure Gradle Wrapper is Present
+      run: |
+        if [ -f gradlew ]; then
+          chmod +x gradlew
+          echo "Gradle wrapper exists and execute permissions granted."
+        else
+          echo "Gradle wrapper (gradlew) is missing from the repository."
+          echo "Generating a new Gradle wrapper using pre-installed Gradle..."
+          gradle wrapper --gradle-version 8.2
+          chmod +x gradlew
+          echo "Gradle wrapper generated successfully."
+        fi
+
+    - name: Restore or Generate Debug Keystore
+      run: |
+        if [ -f debug.keystore.base64 ]; then
+          base64 --decode debug.keystore.base64 > debug.keystore
+          echo "Debug keystore restored successfully from base64."
+        elif [ ! -f debug.keystore ]; then
+          echo "Generating a new self-signed debug keystore on the fly..."
+          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          echo "New debug keystore generated successfully."
+        else
+          echo "debug.keystore already exists."
+        fi
+
+    - name: Build Debug APK
+      run: ./gradlew assembleDebug --stacktrace
+
+    - name: Upload Debug APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: AudioCity-Debug-APK
+        path: app/build/outputs/apk/debug/app-debug.apk
+        retention-days: 7
+
+    - name: Check Keystore Configuration for Release
+      id: check_release
+      run: |
+        if [ ! -z "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+          echo "has_keystore=true" >> $GITHUB_OUTPUT
+        else
+          echo "has_keystore=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Decode and Prepare Keystore
+      if: steps.check_release.outputs.has_keystore == 'true'
+      run: |
+        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/my-upload-key.jks
+
+    - name: Build Release APK
+      if: steps.check_release.outputs.has_keystore == 'true'
+      run: ./gradlew assembleRelease --stacktrace
+      env:
+        KEYSTORE_PATH: my-upload-key.jks
+        STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+    - name: Upload Release APK Artifact
+      if: steps.check_release.outputs.has_keystore == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: AudioCity-Release-APK
+        path: app/build/outputs/apk/release/app-release.apk
+        retention-days: 14
